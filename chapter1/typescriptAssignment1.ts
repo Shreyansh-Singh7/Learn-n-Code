@@ -1,6 +1,6 @@
     import * as readline from 'readline';
 
-    const rl = readline.createInterface({
+    const inputreader = readline.createInterface({
         input: process.stdin,
         output: process.stdout
     });
@@ -31,7 +31,7 @@
         }
     }
     
-    rl.question('Enter country code (e.g., IN, US, NZ): ', (input) => {
+    inputreader.question('Enter country code (e.g., IN, US, NZ): ', (input) => {
         getAdjacentCountries(input.toUpperCase());
-        rl.close();
+        inputreader.close();
     });

@@ -1,14 +1,14 @@
-    import * as readline from 'readline';
+import * as readline from 'readline';
 
-    const rl = readline.createInterface({
+    const inputreader = readline.createInterface({
         input: process.stdin,
         output: process.stdout
     });
-    
+
     function getAdjacentCountries(countryCode: string) {
         let countryName: string;
         let neighbors: string[];
-    
+
         if (countryCode === "IN") {
             countryName = "India";
             neighbors = ["Pakistan", "China", "Nepal", "Bangladesh"];
@@ -22,7 +22,7 @@
             console.log("Country code not found.");
             return;
         }
-    
+
         console.log(`Country: ${countryName}`);
         if (neighbors.length > 0) {
             console.log(`Adjacent Countries: ${neighbors.join(", ")}`);
@@ -30,8 +30,8 @@
             console.log("no adjacent countries.");
         }
     }
-    
-    rl.question('Enter country code (e.g., IN, US, NZ): ', (input) => {
+
+    inputreader.question('Enter country code (e.g., IN, US, NZ): ', (input) => {
         getAdjacentCountries(input.toUpperCase());
-        rl.close();
+        inputreader.close();
     });

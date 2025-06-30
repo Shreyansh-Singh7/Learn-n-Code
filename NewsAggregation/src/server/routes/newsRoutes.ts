@@ -1,18 +1,12 @@
 import express from "express";
-import { addCategory, filterNews, getAllNews, getTodaysNews } from "../controllers/newsController.js";
-import {
-  saveArticle,
-  unsaveArticle,
-  getSavedArticles,
-} from "../controllers/userNewsControllers.js";
+import { NewsController } from "../controllers/newsController.js";
 
 const router = express.Router();
+const newsController = new NewsController();
 
-router.get("/today", getTodaysNews);
-router.get("/all", getAllNews);
-router.post("/save", saveArticle);
-router.delete("/unsave/:articleId", unsaveArticle);
-router.get("/saved", getSavedArticles);
-router.get("/filter", filterNews);
+router.get("/", (req, res) => newsController.getAllNews(req, res));
+router.get("/today", (req, res) => newsController.getTodaysNews(req, res));
+router.get("/filter", (req, res) => newsController.filterNews(req, res));
+router.post("/categories", (req, res) => newsController.addCategory(req, res));
 
 export default router;

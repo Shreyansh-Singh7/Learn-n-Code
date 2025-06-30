@@ -1,6 +1,8 @@
 // src/server/services/notificationService.ts
-import { getDb } from '../../database/db.js';
-import { sendEmail } from '../utils/emailService.js';
+import { getDb } from "../../database/db.js";
+import { EmailService } from "../utils/emailService.js";
+
+const emailService = new EmailService();
 
 export async function checkAndSendNotificationsForUser(userId: number, email: string) {
   const db = await getDb();
@@ -26,7 +28,7 @@ export async function checkAndSendNotificationsForUser(userId: number, email: st
 
   const matchingArticles = articles.filter((article: any) => {
     const matchCategory = categoryList.includes(article.category);
-    const matchKeyword = keywordList.some(k =>
+    const matchKeyword = keywordList.some((k) =>
       (article.title + article.description).toLowerCase().includes(k)
     );
     return matchCategory || matchKeyword;
@@ -37,22 +39,24 @@ export async function checkAndSendNotificationsForUser(userId: number, email: st
       `SELECT * FROM notifications WHERE user_id = ? AND article_id = ?`,
       [userId, article.article_id]
     );
-    console.log(alreadySent)
 
     if (!alreadySent) {
-      // Save notification
       await db.run(
         `INSERT INTO notifications (user_id, article_id, title, content, sent_at) VALUES (?, ?, ?, ?, ?)`,
         userId,
         article.article_id,
         article.title,
-        article.description || '',
+        article.description || "",
         new Date().toISOString()
       );
-      console.log('sending', article.title, 'to email',email);
 
-      // Send email
-      await sendEmail(email, `📰 New article: ${article.title}`, `${article.description}\n\nRead more: ${article.url}`);
+      console.log("sending", article.title, "to email", email);
+
+      await emailService.sendEmail(
+        email,
+        `📰 New article: ${article.title}`,
+        `${article.description}\n\nRead more: ${article.url}`
+      );
     }
   }
 }

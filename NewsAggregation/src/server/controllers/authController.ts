@@ -1,75 +1,64 @@
-import express, { Router, Request, Response } from 'express';
-import { IAuthService } from '../services/authService';
-import User from '../models/user';
-import { LoginRequest, SignupRequest } from '../../utils/types';
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { getDb } from "../../database/db.js";
+import dotenv from "dotenv";
 
+dotenv.config();
+const JWT_SECRET = process.env.JWT_SECRET || "secret_key";
+const DEFAULT_CATEGORIES = [
+  "business",
+  "entertainment",
+  "sports",
+  "technology",
+];
 
-export class AuthController {
-    private router: Router;
-    private authService: IAuthService;
+export async function signup(req: any, res: any) {
+  const { username, email, password } = req.body;
+  const db = await getDb();
 
-    constructor(authService: IAuthService) {
-        this.router = express.Router();
-        this.authService = authService;
-        this.initializeRoutes();
-    }
+  if (!username || !email || !password)
+    return res.status(400).json({ error: "Missing fields" });
 
-    private initializeRoutes(): void {
-        this.router.post('/login', this.handleLogin.bind(this));
-        this.router.post('/signup', this.handleSignup.bind(this));
-    }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email))
+    return res.status(400).json({ error: "Invalid email format" });
 
-    public getRouter(): Router {
-        return this.router;
-    }
+  const existing = await db.get(`SELECT * FROM users WHERE email = ?`, [email]);
+  if (existing) return res.status(409).json({ error: "User already exists" });
 
-    private async handleLogin(request: Request, response: Response): Promise<void> {
-        try {
-            const body: LoginRequest = request.body;
-            if (!body.email || !body.password) {
-                response.status(400).json({ success: false, error: 'Email and password are required' });
-                return;
-            }
-            const user: User = await this.authService.login(body.email, body.password);
-            response.status(200).json({
-                success: true,
-                data: {
-                    userId: user.getUserId(),
-                    username: user.getUsername(),
-                    email: user.getEmail(),
-                    role_id: user.getRoleId(),
-                },
-            });
-        } catch (error: any) {
-            response.status(401).json({ success: false, error: error.message });
-        }
-    }
+  const hash = await bcrypt.hash(password, 10);
+  const result = await db.run(
+    `INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)`,
+    [username, email, hash, "user"]
+  );
 
-    private async handleSignup(request: Request, response: Response): Promise<void> {
-        try {
-            console.log("Incoming signup data:", request.body);
-            const body: SignupRequest = request.body;
-            if (!body.username || !body.email || !body.password) {
-                response.status(400).json({ success: false, error: 'All fields are required' });
-                return;
-            }
-            const isValid = await this.authService.validateUser(body.email, body.username);
-            if (!isValid) {
-                response.status(400).json({ success: false, error: 'Invalid email or username' });
-                return;
-            }
-            const user: User = await this.authService.signup(body.username, body.email, body.password);
-            response.status(201).json({
-                success: true,
-                data: {
-                    userId: user.getUserId(),
-                    username: user.getUsername(),
-                    email: user.getEmail(),
-                    role_id: user.getRoleId(),
-                },
-            });
-        } catch (error: any) {
-            response.status(400).json({ success: false, error: error.message });
-        }
-    }
+  const userId = result.lastID;
+
+  // ✅ Add default category preferences (enabled by default)
+  const insertPromises = DEFAULT_CATEGORIES.map((category) => {
+    return db.run(
+      `INSERT INTO notification_preferences (user_id, category, enabled) VALUES (?, ?, ?)`,
+      [userId, category, 1] // 1 = enabled
+    );
+  });
+
+  await Promise.all(insertPromises);
+
+  return res.status(201).json({ message: "User registered successfully" });
+}
+
+export async function login(req: any, res: any) {
+  const { email, password } = req.body;
+  const db = await getDb();
+
+  const user = await db.get(`SELECT * FROM users WHERE email = ?`, [email]);
+  if (!user) return res.status(401).json({ error: "Invalid credentials" });
+
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) return res.status(401).json({ error: "Invalid credentials" });
+
+  const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, {
+    expiresIn: "2h",
+  });
+  return res.json({ token, role: user.role });
 }

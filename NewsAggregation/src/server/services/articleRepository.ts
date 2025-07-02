@@ -1,6 +1,6 @@
 // src/server/services/articleRepository.ts
-import { db } from '../db.js';
-import { Article } from '../models/articleModel.js';
+import { db } from '../db.ts';
+import { Article } from '../models/articleModel.ts';
 
 export async function saveArticle(article: Article): Promise<void> {
   const query = `

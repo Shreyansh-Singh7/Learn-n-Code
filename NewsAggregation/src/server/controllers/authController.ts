@@ -1,63 +1,40 @@
-// src/server/controllers/AuthController.ts
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import { getDb } from "../../database/db.js";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const JWT_SECRET = process.env.JWT_SECRET || "secret_key";
-const DEFAULT_CATEGORIES = ["business", "entertainment", "sports", "technology"];
+import { AuthService } from "../services/authService.ts";
+import { getDb } from "../../database/db.ts";
 
 export class AuthController {
+  private service = new AuthService();
+
   async signup(req: any, res: any) {
-    const { username, email, password } = req.body;
-    const db = await getDb();
+    try {
+      const { username, email, password } = req.body;
 
-    if (!username || !email || !password)
-      return res.status(400).json({ error: "Missing fields" });
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email))
-      return res.status(400).json({ error: "Invalid email format" });
-
-    const existing = await db.get(`SELECT * FROM users WHERE email = ?`, [email]);
-    if (existing) return res.status(409).json({ error: "User already exists" });
-
-    const hash = await bcrypt.hash(password, 10);
-    const result = await db.run(
-      `INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)`,
-      [username, email, hash, "user"]
-    );
-
-    const userId = result.lastID;
-
-    // Add default category preferences
-    const insertPromises = DEFAULT_CATEGORIES.map((category) =>
-      db.run(
-        `INSERT INTO notification_preferences (user_id, category, enabled) VALUES (?, ?, ?)`,
-        [userId, category, 1]
-      )
-    );
-
-    await Promise.all(insertPromises);
-    return res.status(201).json({ message: "User registered successfully" });
+      const result = await this.service.signup(username, email, password);
+      res.status(201).json({ message: "User created", userId: result.userId });
+    } catch (error: any) {
+      const message = error.message || "Signup failed";
+      const status = message === "User already exists" ? 409 : 400;
+      res.status(status).json({ error: message });
+    }
   }
 
-  async login(req: any, res: any) {
-    const { email, password } = req.body;
-    const db = await getDb();
+    async login(req: any, res: any) {
+    try {
+      const { email, password } = req.body;
+      const db = await getDb();
 
-    const user = await db.get(`SELECT * FROM users WHERE email = ?`, [email]);
-    if (!user) return res.status(404).json({ error: "User not found" });
+      const user = await db.get(`SELECT * FROM users WHERE email = ?`, [email]);
+      if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(401).json({ error: "Invalid credentials" });
+      const valid = await bcrypt.compare(password, user.password);
+      if (!valid) return res.status(401).json({ error: "Invalid credentials" });
 
-    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, {
-      expiresIn: "7d",
-    });
-
-    return res.status(200).json({ token });
+      const token = this.service.generateToken({ userId: user.id, role: user.role });
+      res.json({ token, role: user.role });
+    } catch (err) {
+      console.error("Login error:", err);
+      res.status(500).json({ error: "Login failed" });
+    }
   }
+  
 }

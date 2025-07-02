@@ -5,7 +5,7 @@ import { useNotificationsMenu } from "./userNotificationsMenu.ts";
 
 export async function userMenu(token: string) {
   while (true) {
-    console.log("1. View headlines (today)");
+    console.log("\n1. View headlines (today)");
     console.log("2. View saved articles");
     console.log("3. Save an article");
     console.log("4. Unsave an article");
@@ -16,7 +16,6 @@ export async function userMenu(token: string) {
     const choice = readlineSync.question("Choose option: ");
 
     if (choice === "1") {
-      console.log("🟡 Calling viewTodaysHeadlines...");
       await viewTodaysHeadlines(token);
     } else if (choice === "2") {
       await viewSavedArticles(token);
@@ -39,16 +38,13 @@ export async function viewTodaysHeadlines(token: string) {
   try {
     console.log("🔍 Fetching today's headlines...");
 
-    const { data } = await axios.get("http://localhost:3000/news/today", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Connection: "close",
-      },
+    const { data } = await axios.get("http://localhost:3000/api/news/today", {
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     if (!data || data.length === 0) {
-      console.log("❌ No articles found.");
-      return true;
+      console.log("🛑 No news found for today.");
+      return;
     }
 
     data.forEach((article: any, index: number) => {
@@ -58,102 +54,89 @@ export async function viewTodaysHeadlines(token: string) {
       console.log(`   URL: ${article.url}`);
     });
   } catch (err: any) {
-    console.error("❌ Error fetching articles:", err.message);
+    console.error("❌ Error fetching headlines:", err?.response?.data?.error || err.message);
   }
 }
 
-export async function viewSavedArticles(token: string) {
+async function viewSavedArticles(token: string) {
   try {
-    const { data } = await axios.get("http://localhost:3000/news/saved", {
-      headers: { Authorization: `Bearer ${token}`, Connection: "close" },
+    const { data } = await axios.get("http://localhost:3000/api/user/saved", {
+      headers: { Authorization: `Bearer ${token}` },
     });
 
-    if (!data || data.length === 0) {
+    if (data.length === 0) {
       console.log("📭 No saved articles.");
       return;
     }
 
-    console.log("\n🔖 Saved Articles:");
-    data.forEach((article: any, index: number) => {
-      console.log(`\n${index + 1}. ${article.title}`);
+    console.log("\n💾 Saved Articles:");
+    data.forEach((article: any, i: number) => {
+      console.log(`\n${i + 1}. ${article.title}`);
       console.log(`   Source: ${article.source}`);
       console.log(`   Published: ${article.published_at}`);
       console.log(`   URL: ${article.url}`);
     });
   } catch (err: any) {
-    console.error("❌ Error fetching saved articles:", err.message);
+    console.error("❌ Failed to fetch saved articles:", err?.response?.data?.error || err.message);
   }
 }
 
-export async function saveArticleById(token: string) {
-  const articleId = readlineSync.question("Enter article URL to save: ");
+async function saveArticleById(token: string) {
+  const articleId = readlineSync.question("Enter article ID to save: ");
 
   try {
     await axios.post(
-      `http://localhost:3000/news/save`,
+      "http://localhost:3000/api/user/save",
       { articleId },
-      {
-        headers: { Authorization: `Bearer ${token}`, Connection: "close" },
-      }
+      { headers: { Authorization: `Bearer ${token}` } }
     );
-
     console.log("✅ Article saved.");
   } catch (err: any) {
-    console.error("❌ Error saving article:", err.message);
+    console.error("❌ Failed to save article:", err?.response?.data?.error || err.message);
   }
 }
 
-export async function unsaveArticleById(token: string) {
-  const articleId = readlineSync.question("Enter article URL to unsave: ");
-  const encodedId = encodeURIComponent(articleId);
+async function unsaveArticleById(token: string) {
+  const articleId = readlineSync.question("Enter article ID to unsave: ");
 
   try {
-    await axios.delete(`http://localhost:3000/news/unsave/${encodedId}`, {
-      headers: { Authorization: `Bearer ${token}`, Connection: "close" },
+    await axios.delete(`http://localhost:3000/api/user/unsave/${articleId}`, {
+      headers: { Authorization: `Bearer ${token}` },
     });
-
-    console.log("✅ Article unsaved.");
+    console.log("✅ Article removed from saved list.");
   } catch (err: any) {
-    console.error("❌ Error unsaving article:", err.message);
+    console.error("❌ Failed to unsave article:", err?.response?.data?.error || err.message);
   }
 }
 
-export async function filterArticles(token: string) {
-  const category = readlineSync.question(
-    "Enter category (or press Enter to skip): "
-  );
-  const fromDate = readlineSync.question("From date (yyyy-mm-dd, optional): ");
-  const toDate = readlineSync.question("To date (yyyy-mm-dd, optional): ");
+async function filterArticles(token: string) {
+  const category = readlineSync.question("Filter by category (leave blank to skip): ");
+  const from = readlineSync.question("From date (YYYY-MM-DD, blank to skip): ");
+  const to = readlineSync.question("To date (YYYY-MM-DD, blank to skip): ");
 
-  const queryParams = new URLSearchParams();
-
-  if (category) queryParams.append("category", category);
-  if (fromDate) queryParams.append("from", fromDate);
-  if (toDate) queryParams.append("to", toDate);
-
-  const url = `http://localhost:3000/news/filter?${queryParams.toString()}`;
+  const params: Record<string, string> = {};
+  if (category) params.category = category;
+  if (from) params.from = from;
+  if (to) params.to = to;
 
   try {
-    const { data } = await axios.get(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Connection: "close",
-      },
+    const { data } = await axios.get("http://localhost:3000/api/news/filter", {
+      headers: { Authorization: `Bearer ${token}` },
+      params,
     });
 
     if (!data || data.length === 0) {
-      console.log("❌ No articles found for given filters.");
+      console.log("🛑 No news found matching filters.");
       return;
     }
 
-    data.forEach((article: any, index: number) => {
-      console.log(`\n${index + 1}. ${article.title}`);
+    data.forEach((article: any, i: number) => {
+      console.log(`\n${i + 1}. ${article.title}`);
       console.log(`   Source: ${article.source}`);
-      console.log(`   Category: ${article.category}`);
       console.log(`   Published: ${article.published_at}`);
       console.log(`   URL: ${article.url}`);
     });
   } catch (err: any) {
-    console.error("❌ Error filtering article:", err.message);
+    console.error("❌ Failed to filter articles:", err?.response?.data?.error || err.message);
   }
 }

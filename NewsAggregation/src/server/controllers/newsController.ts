@@ -1,23 +1,11 @@
-import { getDb } from "../../database/db.js";
+import { NewsService } from "../services/newsService.ts";
 
 export class NewsController {
+  private service = new NewsService();
+
   async getTodaysNews(req: any, res: any) {
     try {
-      const db = await getDb();
-
-      const dayStart = new Date();
-      dayStart.setUTCDate(dayStart.getUTCDate() - 1);
-      dayStart.setUTCHours(0, 0, 0, 0);
-
-      const dayEnd = new Date();
-      dayEnd.setUTCDate(dayEnd.getUTCDate() - 1);
-      dayEnd.setUTCHours(23, 59, 59, 999);
-
-      const news = await db.all(
-        `SELECT * FROM articles WHERE published_at BETWEEN ? AND ?`,
-        [dayStart.toISOString(), dayEnd.toISOString()]
-      );
-
+      const news = await this.service.getTodaysNews();
       res.json(news);
     } catch (err) {
       console.error("[GET /news/today] Error:", err);
@@ -27,12 +15,7 @@ export class NewsController {
 
   async getAllNews(req: any, res: any) {
     try {
-      const db = await getDb();
-
-      const news = await db.all(
-        `SELECT * FROM articles ORDER BY published_at DESC`
-      );
-
+      const news = await this.service.getAllNews();
       res.json(news);
     } catch (err) {
       console.error("[GET /news] Error:", err);
@@ -42,58 +25,12 @@ export class NewsController {
 
   async filterNews(req: any, res: any) {
     try {
-      const db = await getDb();
       const { category, from, to } = req.query;
-
-      const conditions = [];
-      const params = [];
-
-      if (category) {
-        conditions.push("category = ?");
-        params.push(category);
-      }
-
-      if (from) {
-        conditions.push("date(published_at) >= date(?)");
-        params.push(from);
-      }
-
-      if (to) {
-        conditions.push("date(published_at) <= date(?)");
-        params.push(to);
-      }
-
-      const whereClause = conditions.length
-        ? `WHERE ${conditions.join(" AND ")}`
-        : "";
-      const query = `SELECT * FROM articles ${whereClause} ORDER BY published_at DESC`;
-
-      const articles = await db.all(query, params);
-      res.json(articles);
+      const news = await this.service.filterNews(category as string, from as string, to as string);
+      res.json(news);
     } catch (err) {
       console.error("[GET /news/filter] Error:", err);
       res.status(500).json({ error: "Failed to filter news" });
-    }
-  }
-
-  async addCategory(req: any, res: any) {
-    const { name } = req.body;
-
-    if (!name) {
-      return res.status(400).json({ error: "Category name is required" });
-    }
-
-    try {
-      const db = await getDb();
-      await db.run(`INSERT INTO categories (name) VALUES (?)`, [name]);
-      res.status(201).json({ message: `Category '${name}' added successfully.` });
-    } catch (err: any) {
-      if (err.message.includes("UNIQUE constraint failed")) {
-        res.status(409).json({ error: "Category already exists." });
-      } else {
-        console.error("[POST /news/categories] Error:", err);
-        res.status(500).json({ error: "Failed to add category" });
-      }
     }
   }
 }

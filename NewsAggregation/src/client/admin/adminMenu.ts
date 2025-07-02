@@ -1,91 +1,35 @@
-// src/client/admin/adminMenu.ts
 import readlineSync from "readline-sync";
 import axios from "axios";
-import { getSession } from "../auth/authClient.js";
 
 export async function adminMenu(token: string) {
   while (true) {
     console.log("\n🛠️ Admin Menu");
-    console.log("1. View external server status");
-    console.log("2. View external server details");
-    console.log("3. Edit external server details");
-    console.log("4. Add new news category");
-    console.log("5. Logout");
+    console.log("1. View external servers");
+    console.log("2. Edit external server details");
+    console.log("3. Add new news category");
+    console.log("4. Logout");
 
     const choice = readlineSync.question("Choose option: ");
 
     if (choice === "1") {
-      await viewExternalServerStatus(token);
+      await viewExternalServers(token);
     } else if (choice === "2") {
-      await viewExternalServers(token); // 👈 add this
-    } else if (choice === "3") {
       await editExternalServer(token);
+    } else if (choice === "3") {
+      await addNewsCategory(token);
     } else if (choice === "4") {
-      await addNewsCategory(token || "");
-    } else if (choice === "5") {
       console.log("👋 Logged out.");
       break;
     } else {
-      console.log("🚧 Feature not implemented yet.");
+      console.log("Invalid choice.");
     }
-  }
-}
-
-async function addNewsCategory(token: string) {
-  const name = readlineSync.question("Enter category name: ");
-
-  try {
-    const res = await axios.post(
-      "http://localhost:3000/admin/categories",
-      { name },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Connection: "close",
-        },
-      }
-    );
-    console.log(`✅ Category "${name}" added successfully.`);
-  } catch (err: any) {
-    const message = err?.response?.data?.error || err.message;
-    console.error("❌ Failed to add category:", message);
-  }
-}
-
-async function viewExternalServerStatus(token: string) {
-  try {
-    console.log("🔍 Checking external server status...");
-
-    const res = await axios.get(
-      "http://localhost:3000/admin/external-server/status",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Connection: "close",
-        },
-      }
-    );
-
-    console.log(`\n🟢 Status: ${res.data.status.toUpperCase()}`);
-    if (res.data.responseTimeMs) {
-      console.log(`⏱️  Response Time: ${res.data.responseTimeMs} ms`);
-    }
-    if (res.data.message) {
-      console.log(`ℹ️  Message: ${res.data.message}`);
-    }
-  } catch (err: any) {
-    const message = err?.response?.data?.error || err.message;
-    console.error("❌ Failed to fetch server status :", message);
   }
 }
 
 async function viewExternalServers(token: string) {
   try {
-    const res = await axios.get("http://localhost:3000/admin/external-server", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Connection: "close",
-      },
+    const res = await axios.get("http://localhost:3000/api/servers", {
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     console.log("\n🌐 External Servers:");
@@ -106,30 +50,13 @@ async function viewExternalServers(token: string) {
 }
 
 async function editExternalServer(token: string) {
-  const id = readlineSync.question(
-    "Enter the ID of the server to update (e.g. newsapi): "
-  );
-
+  const id = readlineSync.question("Enter the ID of the server to update: ");
   const name = readlineSync.question("Enter new name (leave blank to skip): ");
-  const api_url = readlineSync.question(
-    "Enter new API URL (leave blank to skip): "
-  );
-  const api_key = readlineSync.question(
-    "Enter new API Key (leave blank to skip): "
-  );
-  const country = readlineSync.question(
-    "Enter country code (leave blank to skip): "
-  );
-  const category = readlineSync.question(
-    "Enter category (leave blank to skip): "
-  );
-
-  let is_active_input = readlineSync.question(
-    "Set active? (y/n/leave blank to skip): "
-  );
-  let is_active: number | undefined;
-  if (is_active_input.toLowerCase() === "y") is_active = 1;
-  if (is_active_input.toLowerCase() === "n") is_active = 0;
+  const api_url = readlineSync.question("Enter new API URL (leave blank to skip): ");
+  const api_key = readlineSync.question("Enter new API Key (leave blank to skip): ");
+  const country = readlineSync.question("Enter country (leave blank to skip): ");
+  const category = readlineSync.question("Enter category (leave blank to skip): ");
+  const is_active_input = readlineSync.question("Set active? (y/n/blank to skip): ");
 
   const payload: Record<string, any> = {};
   if (name) payload.name = name;
@@ -137,26 +64,37 @@ async function editExternalServer(token: string) {
   if (api_key) payload.api_key = api_key;
   if (country) payload.country = country;
   if (category) payload.category = category;
-  if (is_active !== undefined) payload.is_active = is_active;
+  if (is_active_input.toLowerCase() === "y") payload.is_active = 1;
+  if (is_active_input.toLowerCase() === "n") payload.is_active = 0;
 
   if (Object.keys(payload).length === 0) {
-    console.log("⚠️  No fields entered to update.");
+    console.log("⚠️  No fields to update.");
     return;
   }
 
   try {
-    await axios.put(
-      `http://localhost:3000/admin/external-server/${id}`,
-      payload,
-      {
-        headers: { Authorization: `Bearer ${token}`, Connection: "close" },
-      }
-    );
+    await axios.put(`http://localhost:3000/api/servers/${id}`, payload, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     console.log(`✅ Server "${id}" updated successfully.`);
   } catch (err: any) {
-    console.error(
-      "❌ Failed to update server:",
-      err?.response?.data?.error || err.message
+    console.error("❌ Failed to update server:", err?.response?.data?.error || err.message);
+  }
+}
+
+async function addNewsCategory(token: string) {
+  const name = readlineSync.question("Enter category name: ");
+
+  try {
+    await axios.post(
+      "http://localhost:3000/api/admin/categories",
+      { name },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
     );
+    console.log(`✅ Category "${name}" added successfully.`);
+  } catch (err: any) {
+    console.error("❌ Failed to add category:", err?.response?.data?.error || err.message);
   }
 }

@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "node --loader ts-node/esm src/server/app.ts",
+    "dev": "node --loader ts-node/esm src/server/server.ts",
     "cli": "node --loader ts-node/esm src/client/newsConsole.ts",
     "init-db": "node --loader ts-node/esm src/scripts/init-db.ts",
     "fetch-news": "node --loader ts-node/esm src/scripts/fetch-news.ts",

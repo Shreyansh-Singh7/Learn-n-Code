@@ -1,6 +1,6 @@
 import { Pool, RowDataPacket } from 'mysql2/promise';
-import User from '../models/user';
-import { getDbPool } from '../config/database';
+import User from '../models/user.ts';
+import { getDbPool } from '../config/database.ts';
 
 export interface IUserRepository {
     saveUser(user: User): Promise<void>;

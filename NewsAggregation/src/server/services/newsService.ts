@@ -1,118 +1,28 @@
-// src/server/services/newsService.ts
-import axios from "axios";
-import { getDb } from "../../database/db.js";
-import dotenv from "dotenv";
-import { v4 as uuidv4 } from "uuid";
+import { NewsRepository } from "../repositories/newsRepository.ts";
 
-dotenv.config();
+export class NewsService {
+  private repository = new NewsRepository();
 
-const API_KEY = process.env.NEWSAPI_KEY;
-const API_URL = "https://newsapi.org/v2/top-headlines";
+  async getTodaysNews() {
+    const dayStart = new Date();
+    dayStart.setUTCDate(dayStart.getUTCDate() - 1);
+    dayStart.setUTCHours(0, 0, 0, 0);
 
-// Fetch news from API and store in DB
-export async function fetchAndStoreNews(
-  category: string = "general"
-): Promise<number> {
-  try {
-    const db = await getDb();
+    const dayEnd = new Date();
+    dayEnd.setUTCDate(dayEnd.getUTCDate() - 1);
+    dayEnd.setUTCHours(23, 59, 59, 999);
 
-    // 🔽 Get active external server
-    const server = await db.get(
-      `SELECT * FROM external_servers WHERE is_active = 1 LIMIT 1`
+    return await this.repository.getNewsByDateRange(
+      dayStart.toISOString(),
+      dayEnd.toISOString()
     );
-    if (!server) throw new Error("No active external server configured");
-
-    const response = await axios.get(server.api_url, {
-      params: {
-        country: server.country || "us",
-        category,
-        apiKey: server.api_key,
-        pageSize: 10,
-      },
-    });
-
-    const articles = response.data.articles;
-    let storedCount = 0;
-
-    for (const article of articles) {
-      try {
-        const result = await db.run(
-          `INSERT OR IGNORE INTO articles (
-            article_id, title, description, url, source, published_at, category
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          article.url || uuidv4(),
-          article.title,
-          article.description,
-          article.url,
-          article.source?.name || "",
-          article.publishedAt,
-          category
-        );
-
-        // ✅ Safe check without type assertion
-        if (
-          result &&
-          typeof result.changes === "number" &&
-          result.changes > 0
-        ) {
-          storedCount++;
-        }
-      } catch (err) {
-        console.error(`❌ Failed to insert article: ${article.title}`, err);
-      }
-    }
-
-    return storedCount;
-  } catch (err) {
-    console.error(`❌ Failed to fetch news for category "${category}":`, err);
-    return 0;
-  }
-}
-
-// src/server/services/newsService.ts
-export async function checkExternalServerStatus(req: any, res: any) {
-  const db = await getDb();
-  const server = await db.get(
-    `SELECT * FROM external_servers WHERE is_active = 1`
-  );
-
-  if (!server) {
-    return res
-      .status(404)
-      .json({
-        status: "not_configured",
-        message: "No active external server found",
-      });
   }
 
-  const start = Date.now();
-  try {
-    const response = await axios.get(server.api_url, {
-      params: {
-        country: server.country || "us",
-        apiKey: server.api_key,
-        pageSize: 1,
-      },
-      timeout: 5000,
-    });
+  async getAllNews() {
+    return await this.repository.getAllNews();
+  }
 
-    const duration = Date.now() - start;
-
-    if (response.status === 200 && response.data?.status === "ok") {
-      return res.json({
-        status: "online",
-        responseTimeMs: duration,
-      });
-    } else {
-      return res.json({
-        status: "degraded",
-        message: `Unexpected response: ${response.status}`,
-      });
-    }
-  } catch (err: any) {
-    return res.json({
-      status: "offline",
-      message: err?.message || "No response from server",
-    });
+  async filterNews(category?: string, from?: string, to?: string) {
+    return await this.repository.filterNews(category, from, to);
   }
 }

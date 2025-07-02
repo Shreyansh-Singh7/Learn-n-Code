@@ -1,55 +1,86 @@
-import express, { Express } from 'express';
-import http from 'http';
-import { IAuthService, AuthService } from '../services/authService';
-import { AuthController } from '../controllers/authController';
-import { IUserRepository, UserRepository } from '../repositories/userRepository';
-import { getDbPool, closeDbPool } from '../config/database';
+import express, { Express, Request, Response, NextFunction } from "express";
+import http from "http";
+import { getDb } from "../../database/db.ts";
+import { AuthController } from "./authController.ts";
+import { NewsController } from "./newsController.ts";
+import { NotificationController } from "./notificationController.ts";
+import { AdminController } from "./adminControllers.ts";
+import { UserNewsController } from "./userNewsControllers.ts";
 
 export default class ServerController {
-    private app: Express;
-    private port: number;
-    private server: http.Server | null = null;
+  private app: Express;
+  private port: number;
+  private server: http.Server | null = null;
 
-    constructor(port: number) {
-        this.app = express();
-        this.port = port;
+  constructor(port: number) {
+    this.app = express();
+    this.port = port;
+  }
+
+  public async initializeServer(): Promise<void> {
+    try {
+      // Check DB connection
+      const db = await getDb();
+      await db.get("SELECT 1");
+      console.log("✅ Database connected");
+    } catch (error) {
+      console.error("❌ Database connection failed:", error);
+      process.exit(1);
     }
 
-    public async initializeServer(): Promise<void> {
-        try {
-            const pool = getDbPool();
-            await pool.query('SELECT 1');
-            console.log('Database connected');
-        } catch (error) {
-            console.error('Database connection failed:', error);
-            process.exit(1);
-        }
+    this.app.use(express.json());
 
-        this.app.use(express.json());
+    // Initialize controllers
+    const authController = new AuthController();
+    const newsController = new NewsController();
+    const notificationController = new NotificationController();
+    const adminController = new AdminController();
+    const userNewsController = new UserNewsController();
 
-        const userRepository: IUserRepository = new UserRepository();
-        const authService: IAuthService = new AuthService(userRepository);
+    // Define routes
+    this.app.get("/api/news/today", newsController.getTodaysNews.bind(newsController));
+    this.app.get("/api/news", newsController.getAllNews.bind(newsController));
+    this.app.get("/api/news/filter", newsController.filterNews.bind(newsController));
 
-        const authController = new AuthController(authService);
+    this.app.post("/api/auth/signup", authController.signup.bind(authController));
+    this.app.post("/api/auth/login", authController.login.bind(authController));
 
-        this.app.use('/api', authController.getRouter());
+    this.app.get("/api/notifications", notificationController.getNotifications.bind(notificationController));
+    this.app.get("/api/notifications/config", notificationController.getNotificationConfig.bind(notificationController));
+    this.app.post("/api/notifications/category", notificationController.toggleCategory.bind(notificationController));
+    this.app.post("/api/notifications/keywords", notificationController.updateKeywords.bind(notificationController));
 
-        this.app.use((request, response) => {
-            response.status(404).json({ success: false, error: 'Route not found' });
-        });
+    this.app.get("/api/servers", adminController.getExternalServers.bind(adminController));
+    this.app.put("/api/servers/:id", adminController.updateExternalServer.bind(adminController));
 
-        this.app.use((err: Error, request: express.Request, response: express.Response, next: express.NextFunction) => {
-            console.error(err.stack);
-            response.status(500).json({ success: false, error: 'Internal server error' });
-        });
+    this.app.post("/api/user/save", userNewsController.saveArticle.bind(userNewsController));
+    this.app.delete("/api/user/unsave/:articleId", userNewsController.unsaveArticle.bind(userNewsController));
+    this.app.get("/api/user/saved", userNewsController.getSavedArticles.bind(userNewsController));
 
-        this.server = this.app.listen(this.port, () => console.log(`Server running on port ${this.port}`));
+    this.app.post("/api/admin/categories", adminController.addCategory.bind(adminController));
+
+    // 404 Handler
+    this.app.use((req: Request, res: Response) => {
+      res.status(404).json({ success: false, error: "Route not found" });
+    });
+
+    // Error Handler
+    this.app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+      console.error("Server Error:", err);
+      res.status(500).json({ success: false, error: "Internal Server Error" });
+    });
+
+    // Start server
+    this.server = this.app.listen(this.port, () => {
+      console.log(`🚀 Server running on http://localhost:${this.port}`);
+    });
+  }
+
+  public async stopServer(): Promise<void> {
+    if (this.server) {
+      this.server.close(() => {
+        console.log("🛑 Server stopped");
+      });
     }
-
-    public async close(): Promise<void> {
-        if (this.server) {
-            this.server.close();
-        }
-        await closeDbPool();
-    }
+  }
 }

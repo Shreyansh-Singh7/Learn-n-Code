@@ -1,67 +1,51 @@
-import { getDb } from "../../database/db.js";
+import { NotificationService } from "../services/notificationService.ts";
 
 export class NotificationController {
+  private service = new NotificationService();
+
   async getNotifications(req: any, res: any) {
-    const db = await getDb();
-    const userId = req.user.userId;
-
-    const rows = await db.all(
-      `SELECT * FROM notifications WHERE user_id = ? ORDER BY sent_at DESC`,
-      [userId]
-    );
-
-    res.json(rows);
+    try {
+      const userId = req.user.userId;
+      const rows = await this.service.getUserNotifications(userId);
+      res.json(rows);
+    } catch (err) {
+      console.error("[GET /notifications] Error:", err);
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
   }
 
   async getNotificationConfig(req: any, res: any) {
-    const db = await getDb();
-    const userId = req.user.userId;
-
-    const categories = await db.all(
-      `SELECT category, enabled FROM notification_preferences WHERE user_id = ?`,
-      [userId]
-    );
-
-    const keywords = await db.all(
-      `SELECT keyword FROM keyword_preferences WHERE user_id = ?`,
-      [userId]
-    );
-
-    res.json({ categories, keywords: keywords.map((k) => k.keyword) });
+    try {
+      const userId = req.user.userId;
+      const config = await this.service.getNotificationConfig(userId);
+      res.json(config);
+    } catch (err) {
+      console.error("[GET /notifications/config] Error:", err);
+      res.status(500).json({ error: "Failed to fetch config" });
+    }
   }
 
   async toggleCategory(req: any, res: any) {
-    const db = await getDb();
-    const userId = req.user.userId;
-    const { category, enabled } = req.body;
-
-    const enabledInt = enabled ? 1 : 0;
-
-    await db.run(
-      `INSERT INTO notification_preferences (user_id, category, enabled)
-       VALUES (?, ?, ?)
-       ON CONFLICT(user_id, category) DO UPDATE SET enabled = ?`,
-      [userId, category, enabledInt, enabledInt]
-    );
-
-    res.json({ message: "Category preference updated" });
+    try {
+      const userId = req.user.userId;
+      const { category, enabled } = req.body;
+      await this.service.toggleCategory(userId, category, enabled);
+      res.json({ message: "Category preference updated" });
+    } catch (err) {
+      console.error("[POST /notifications/category] Error:", err);
+      res.status(500).json({ error: "Failed to update category" });
+    }
   }
 
   async updateKeywords(req: any, res: any) {
-    const db = await getDb();
-    const userId = req.user.userId;
-    const { keywords } = req.body;
-
-    await db.run(`DELETE FROM keyword_preferences WHERE user_id = ?`, [userId]);
-
-    const insertPromises = keywords.map((k: string) =>
-      db.run(
-        `INSERT INTO keyword_preferences (user_id, keyword) VALUES (?, ?)`,
-        [userId, k]
-      )
-    );
-
-    await Promise.all(insertPromises);
-    res.json({ message: "Keyword preferences updated" });
+    try {
+      const userId = req.user.userId;
+      const { keywords } = req.body;
+      await this.service.updateKeywords(userId, keywords);
+      res.json({ message: "Keywords updated" });
+    } catch (err) {
+      console.error("[POST /notifications/keywords] Error:", err);
+      res.status(500).json({ error: "Failed to update keywords" });
+    }
   }
 }

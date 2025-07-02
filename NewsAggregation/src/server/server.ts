@@ -1,9 +1,10 @@
-import ServerController from './controllers/serverController';
 import dotenv from "dotenv";
+import ServerController from "./controllers/serverController.ts";
 
 dotenv.config();
-const defaultServerPort = '5000';
-const serverPort = process.env.PORT || defaultServerPort;
 
-const serverController = new ServerController(parseInt(serverPort));
+const defaultPort = "5000";
+const port = process.env.PORT || defaultPort;
+
+const serverController = new ServerController(parseInt(port));
 serverController.initializeServer();

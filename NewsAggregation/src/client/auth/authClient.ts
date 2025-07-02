@@ -16,7 +16,7 @@ export async function login() {
   });
 
   try {
-    const res = await axios.post("http://localhost:3000/auth/login", {
+    const res = await axios.post("http://localhost:3000/api/auth/login", {
       email,
       password,
     });
@@ -48,7 +48,7 @@ export async function signup() {
   });
 
   try {
-    const res = await axios.post("http://localhost:3000/auth/signup", {
+    await axios.post("http://localhost:3000/api/auth/signup", {
       username,
       email,
       password,
@@ -65,7 +65,7 @@ export async function signup() {
       message = JSON.stringify(err);
     }
 
-    console.error("❌ Login failed:", message);
+    console.error("❌ Signup failed:", message);
     return null;
   }
 }

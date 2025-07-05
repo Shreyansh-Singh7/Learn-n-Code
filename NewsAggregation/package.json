@@ -6,10 +6,10 @@
   "type": "module",
   "scripts": {
     "dev": "node --loader ts-node/esm src/server/server.ts",
-    "cli": "node --loader ts-node/esm src/client/newsConsole.ts",
-    "init-db": "node --loader ts-node/esm src/scripts/init-db.ts",
-    "fetch-news": "node --loader ts-node/esm src/scripts/fetch-news.ts",
-    "seed-categories": "node --loader ts-node/esm src/scripts/seed-categories.ts"
+    "cli": "node --loader ts-node/esm src/client/app.ts",
+    "init-db": "ts-node --esm src/scripts/init-db.ts",
+    "fetch-news": "ts-node --esm src/scripts/fetch-news.ts",
+    "seed-categories": "ts-node --esm src/scripts/seed-categories.ts"
   },
   "keywords": [],
   "author": "",

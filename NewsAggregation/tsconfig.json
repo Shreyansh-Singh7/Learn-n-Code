@@ -1,18 +1,21 @@
 {
-    "compilerOptions": {
-      "target": "ES2020",
-      "module": "ESNext",
-      "moduleResolution": "node",
-      "esModuleInterop": true,
-      "noEmit": true,
-      "allowImportingTsExtensions": true,
-      "forceConsistentCasingInFileNames": true,
-      "strict": true,
-      "skipLibCheck": true,
-      "resolveJsonModule": true,
-      "outDir": "dist",
-      "rootDir": "src",
-    },
-    "include": ["src/server"],
-    "exclude": ["node_modules"]
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "allowImportingTsExtensions": true, // ✅ REQUIRED for `.ts` extension in ESM
+    "noEmit": true,
+    "sourceMap": true
+  },
+  "include": ["src"],
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  }
 }

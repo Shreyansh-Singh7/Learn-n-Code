@@ -7,12 +7,12 @@ import dotenv from "dotenv";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-sqlite3.verbose();
+// Load environment variables from .env file
 dotenv.config();
 
 export async function initializeDatabase() {
   const dbPath = path.resolve(__dirname, "../../data/news.db");
+  sqlite3.verbose();
   const db = await open({
     filename: dbPath,
     driver: sqlite3.Database,

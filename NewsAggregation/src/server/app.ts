@@ -1,15 +1,15 @@
 import express from "express";
 import cors from "cors";
-import { initDb } from "./db.js";
+import { initDb } from "./db.ts";
 import dotenv from "dotenv";
-import { startCronJobs } from "./cronJobs.js";
-import { authenticateToken } from "./middleware/authMiddleware.js";
+import { startCronJobs } from "./cronJobs.ts";
+import { authenticateToken } from "./middleware/authMiddleware.ts";
 
-import authRoutes from "./routes/authRoutes.js";
-import newsRoutes from "./routes/newsRoutes.js";
-import adminRoutes from "./routes/adminRoutes.js";
-import notificationRoutes from "./routes/notificationRoutes.js";
-import userNewsRoutes from "./routes/userNewsRoutes.js";
+import authRoutes from "./routes/authRoutes.ts";
+import newsRoutes from "./routes/newsRoutes.ts";
+import adminRoutes from "./routes/adminRoutes.ts";
+import notificationRoutes from "./routes/notificationRoutes.ts";
+import userNewsRoutes from "./routes/userNewsRoutes.ts";
 
 dotenv.config();
 
@@ -27,7 +27,7 @@ app.use("/user-news", userNewsRoutes);
 
 initDb().then(() => {
   app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`🚀 Server running at http://localhost:${PORT}`);
     startCronJobs();
   });
 });

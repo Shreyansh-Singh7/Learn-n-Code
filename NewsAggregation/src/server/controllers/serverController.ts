@@ -1,11 +1,12 @@
 import express, { Express, Request, Response, NextFunction } from "express";
 import http from "http";
-import { getDb } from "../../database/db.ts";
-import { AuthController } from "./authController.ts";
-import { NewsController } from "./newsController.ts";
-import { NotificationController } from "./notificationController.ts";
-import { AdminController } from "./adminControllers.ts";
-import { UserNewsController } from "./userNewsControllers.ts";
+import { getDb } from "../../database/db";
+import { AuthController } from "./authController";
+import { NewsController } from "./newsController";
+import { NotificationController } from "./notificationController";
+import { AdminController } from "./adminControllers";
+import { UserNewsController } from "./userNewsControllers";
+
 
 export default class ServerController {
   private app: Express;

@@ -8,7 +8,6 @@ export class AuthController {
   async signup(req: any, res: any) {
     try {
       const { username, email, password } = req.body;
-
       const result = await this.service.signup(username, email, password);
       res.status(201).json({ message: "User created", userId: result.userId });
     } catch (error: any) {
@@ -18,15 +17,22 @@ export class AuthController {
     }
   }
 
-    async login(req: any, res: any) {
+  async login(req: any, res: any) {
     try {
       const { email, password } = req.body;
+      console.log("[Login] Email:", email);
       const db = await getDb();
 
       const user = await db.get(`SELECT * FROM users WHERE email = ?`, [email]);
-      if (!user) return res.status(401).json({ error: "Invalid credentials" });
+      if (!user) {
+        console.log("[Login] No user found for email:", email);
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
 
+      console.log("[Login] Stored hash:", user.password);
       const valid = await bcrypt.compare(password, user.password);
+      console.log("[Login] Password valid:", valid);
+
       if (!valid) return res.status(401).json({ error: "Invalid credentials" });
 
       const token = this.service.generateToken({ userId: user.id, role: user.role });
@@ -36,5 +42,4 @@ export class AuthController {
       res.status(500).json({ error: "Login failed" });
     }
   }
-  
 }

@@ -1,40 +1,29 @@
+import { IExternalServer, ICategory } from '../../utils/interfaces';
+import { ClientExternalNewsServerService } from './clientExternalNewsServerService';
 
-import axios from "axios";
+export class AdminService {
+    private externalNewsServerService = new ClientExternalNewsServerService();
 
-const BASE_URL = "http://localhost:3000"; // Change as per actual server
+    async listServers(): Promise<IExternalServer[]> {
+        return this.externalNewsServerService.listServers();
+    }
 
-export async function fetchServerStatuses(): Promise<any[]> {
-  try {
-    const res = await axios.get(`${BASE_URL}/admin/servers/status`);
-    return res.data;
-  } catch {
-    return [];
-  }
-}
+    async viewServer(name: string): Promise<IExternalServer> {
+        return this.externalNewsServerService.viewServer(name);
+    }
 
-export async function fetchServerDetails(): Promise<any[]> {
-  try {
-    const res = await axios.get(`${BASE_URL}/admin/servers`);
-    return res.data;
-  } catch {
-    return [];
-  }
-}
+    async updateServerKey(name: string, newKey: string): Promise<void> {
+        return this.externalNewsServerService.updateApiKey(name, newKey);
+    }
 
-export async function updateServerKey(id: number, apiKey: string): Promise<boolean> {
-  try {
-    await axios.put(`${BASE_URL}/admin/servers/${id}`, { apiKey });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export async function addNewsCategory(name: string): Promise<boolean> {
-  try {
-    await axios.post(`${BASE_URL}/admin/categories`, { name });
-    return true;
-  } catch {
-    return false;
-  }
+    async addCategory(categoryName: string): Promise<number> {
+        const res = await fetch(`${process.env.BASE_API_URL}/category`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ category_name: categoryName }),
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        return json.data as number;
+      }
 }

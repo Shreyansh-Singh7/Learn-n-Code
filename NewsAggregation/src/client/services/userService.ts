@@ -1,109 +1,62 @@
-import axios from "axios";
+import * as dotenv from 'dotenv';
+import { ClientArticleService } from './clientArticleService';
+import { ClientSavedArticleService } from './clientSavedArticleService';
+import { ClientNotificationService } from './clientNotificationService';
+import { IUser } from '../../utils/types';
+import { IArticle, INotification } from '../../utils/interfaces';
 
-const BASE_URL = "http://localhost:3000";
+dotenv.config();
 
-export async function fetchHeadlinesByCategory(category: string): Promise<any[]> {
-  try {
-    const res = await axios.get(`${BASE_URL}/headlines/today`, {
-      params: { category },
-    });
-    return res.data;
-  } catch {
-    return [];
-  }
-}
+export class UserService {
+    private articleService = new ClientArticleService();
+    private savedArticleService = new ClientSavedArticleService();
+    private notificationService = new ClientNotificationService();
 
-export async function fetchHeadlinesByDateRange(category: string, from: string, to: string): Promise<any[]> {
-  try {
-    const res = await axios.get(`${BASE_URL}/headlines/range`, {
-      params: { category, from, to },
-    });
-    return res.data;
-  } catch {
-    return [];
-  }
-}
+    async getTodayHeadlines() {
+        return this.articleService.getTodayHeadlines();
+    }
 
-export async function fetchSavedArticles(userId: number): Promise<any[]> {
-  try {
-    const res = await axios.get(`${BASE_URL}/users/${userId}/saved-articles`);
-    return res.data;
-  } catch {
-    return [];
-  }
-}
+    async getHeadlinesByRange(start: string, end:string) {
+        return this.articleService.getRangeHeadlines(start, end);
+    }
 
-export async function saveArticle(userId: number, articleId: string): Promise<boolean> {
-  try {
-    await axios.post(`${BASE_URL}/users/${userId}/saved-articles`, { articleId });
-    return true;
-  } catch {
-    return false;
-  }
-}
+    async getHeadlinesByRangeAndCategory(start: string, end: string, category: string) {
+        return this.articleService.getCategoryHeadlines(start, category);
+    }
 
-export async function deleteSavedArticle(userId: number, articleId: string): Promise<boolean> {
-  try {
-    await axios.delete(`${BASE_URL}/users/${userId}/saved-articles/${articleId}`);
-    return true;
-  } catch {
-    return false;
-  }
-}
+    async saveArticle(articleId: number, userId: number): Promise<void> {
+        await this.savedArticleService.saveArticleForUser(articleId, userId);
+    }
 
-export async function searchArticles(
-  keyword: string,
-  from?: string,
-  to?: string,
-  sortBy?: string
-): Promise<any[]> {
-  try {
-    const res = await axios.get(`${BASE_URL}/search`, {
-      params: {
-        q: keyword,
-        from,
-        to,
-        sort: sortBy,
-      },
-    });
-    return res.data;
-  } catch {
-    return [];
-  }
-}
+    async getSavedArticles(user: IUser): Promise<IArticle[]> {
+        return this.savedArticleService.getSavedArticles(user.userId);
+    }
 
-export async function getNotifications(userId: number): Promise<any[]> {
-  try {
-    const res = await axios.get(`${BASE_URL}/notifications`, { params: { userId } });
-    return res.data;
-  } catch {
-    return [];
-  }
-}
+    async deleteSavedArticle(articleId: number, userId: number): Promise<void> {
+        await this.savedArticleService.removeSavedArticle(articleId, userId);
+    }
 
-export async function getNotificationConfig(userId: number): Promise<any> {
-  try {
-    const res = await axios.get(`${BASE_URL}/notifications/config`, { params: { userId } });
-    return res.data;
-  } catch {
-    return { categories: [], keywordsEnabled: false };
-  }
-}
+    async searchArticles(query: string, fromDate?: string, toDate?: string, sort?: string): Promise<IArticle[]> {
+        return this.articleService.searchArticles(query, fromDate, toDate, sort);
+    }
 
-export async function toggleCategory(userId: number, categoryId: number | "keywords"): Promise<boolean> {
-  try {
-    await axios.post(`${BASE_URL}/notifications/category`, { userId, categoryId });
-    return true;
-  } catch {
-    return false;
-  }
-}
+    async getNotifications(user: IUser): Promise<INotification[]> {
+        return this.notificationService.getNotifications(user.userId);
+    }
 
-export async function updateKeywords(userId: number, keywords: string): Promise<boolean> {
-  try {
-    await axios.post(`${BASE_URL}/notifications/keywords`, { userId, keywords });
-    return true;
-  } catch {
-    return false;
-  }
+    async enableNotifications(user: IUser): Promise<void> {
+        await this.notificationService.configureSetting(user.userId, 0, true);
+    }
+
+    async disableNotifications(user: IUser): Promise<void> {
+        await this.notificationService.configureSetting(user.userId, 0, false);
+    }
+
+    async addNotificationKeyword(user: IUser, keyword: string): Promise<void> {
+        await this.notificationService.configureSetting(user.userId, 0, true, [keyword]);
+    }
+
+    async removeNotificationKeyword(user: IUser, keyword: string): Promise<void> {
+        await this.notificationService.removeSetting(user.userId, 0);
+    }
 }

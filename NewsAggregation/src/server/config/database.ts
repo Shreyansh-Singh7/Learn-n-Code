@@ -12,7 +12,7 @@ export function getDbPool(): Pool {
             port: parseInt(process.env.DB_PORT || '3306'),
             user: process.env.DB_USERNAME || 'root',
             password: process.env.DB_PASSWORD || '',
-            database: process.env.DB_NAME || 'news_aggregator',
+            database: process.env.DB_NAME || 'news_aggregation',
         });
     }
     return pool;

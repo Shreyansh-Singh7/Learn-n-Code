@@ -1,12 +1,13 @@
 import { Pool, RowDataPacket } from 'mysql2/promise';
-import User from '../models/user.ts';
-import { getDbPool } from '../config/database.ts';
+import User from '../models/user';
+import { getDbPool } from '../config/database';
 
 export interface IUserRepository {
     saveUser(user: User): Promise<void>;
     findUserByEmail(email: string): Promise<User | undefined>;
     getNextUserId(): Promise<number>;
     getRoles(): Promise<{ role_id: number; role_name: string }[]>;
+    getAllUsers(): Promise<User[]>
 }
 
 export class UserRepository implements IUserRepository {
@@ -38,7 +39,7 @@ export class UserRepository implements IUserRepository {
             return undefined;
         }
         const row = rows[0];
-        return new User(row.userId, row.username, row.email, row.password_hash, row.role_id);
+        return new User(row.user_id, row.username, row.email, row.password_hash, row.role_id);
     }
 
     async getNextUserId(): Promise<number> {
@@ -52,5 +53,18 @@ export class UserRepository implements IUserRepository {
         const query = 'SELECT role_id, role_name FROM roles';
         const [rows] = await this.pool.execute<RowDataPacket[]>(query);
         return rows.map((row) => ({ role_id: row.role_id, role_name: row.role_name }));
+    }
+
+    async getAllUsers(): Promise<User[]> {
+        const query = 'SELECT * FROM users WHERE role_id = 2';
+        const [rows] = await this.pool.execute<RowDataPacket[]>(query);
+
+        return rows.map(row => new User(
+            row.user_id,
+            row.username,
+            row.email,
+            row.password_hash,
+            row.role_id
+        ));
     }
 }

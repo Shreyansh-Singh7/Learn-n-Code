@@ -1,42 +1,43 @@
-import { ArticleRepository } from "../repositories/articleRepository.ts";
+import { IArticle } from '../../utils/interfaces';
+import { IArticleRepository } from '../interfaces/IArticleRepository';
 
-export class ArticleService {
-  private repository: ArticleRepository;
+export interface IArticleService {
+    getTodayHeadlines(): Promise<IArticle[]>;
+    getRangeHeadlines(start: string, end: string): Promise<IArticle[]>;
+    getCategoryHeadlines(date: string, category: string): Promise<IArticle[]>;
+    searchArticles(
+        query: string,
+        fromDate?: string,
+        toDate?: string,
+        sortBy?: 'likes' | 'dislikes'
+    ): Promise<IArticle[]>;
+}
 
-  constructor() {
-    this.repository = new ArticleRepository();
-  }
+export class ArticleService implements IArticleService {
+    constructor(private articleRepository: IArticleRepository) { }
 
-  async likeArticle(articleId: string): Promise<void> {
-    await this.repository.likeArticle(articleId);
-  }
+    getTodayHeadlines(): Promise<IArticle[]> {
+        const today = new Date().toISOString().slice(0, 10);
+        return this.articleRepository.findByDate(today);
+    }
 
-  async dislikeArticle(articleId: string): Promise<void> {
-    await this.repository.dislikeArticle(articleId);
-  }
+    getRangeHeadlines(start: string, end: string): Promise<IArticle[]> {
+        return this.articleRepository.findByRange(start, end);
+    }
 
-  async updateKeywords(articleId: string): Promise<void> {
-    const article = await this.repository.getArticleById(articleId);
-    if (!article) throw new Error("Article not found");
+    getCategoryHeadlines(
+        date: string = new Date().toISOString().slice(0, 10),
+        category: string
+    ): Promise<IArticle[]> {
+        return this.articleRepository.findByDateAndCategory(date, category);
+    }
 
-    const titleWords = article.title?.split(/\W+/) || [];
-    const descWords = article.description?.split(/\W+/) || [];
-
-    const keywordSet = new Set<string>();
-    [...titleWords, ...descWords].forEach(word => {
-      const lower = word.toLowerCase();
-      if (lower.length > 3) keywordSet.add(lower);
-    });
-
-    const keywords = Array.from(keywordSet).join(", ");
-    await this.repository.updateKeywords(articleId, keywords);
-  }
-
-  async searchArticles(keyword: string): Promise<any[]> {
-    return this.repository.searchArticlesByKeyword(keyword.toLowerCase());
-  }
-
-  async getAllArticles(): Promise<any[]> {
-    return this.repository.getAllArticles();
-  }
+    async searchArticles(
+        query: string,
+        fromDate?: string,
+        toDate?: string,
+        sortBy?: 'likes' | 'dislikes'
+    ): Promise<IArticle[]> {
+        return this.articleRepository.searchArticles(query, fromDate, toDate, sortBy);
+    }
 }

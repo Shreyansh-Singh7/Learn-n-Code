@@ -1,51 +1,62 @@
-import { NotificationService } from "../services/notificationService.ts";
+import express, { Request, Response, NextFunction, Router } from 'express';
+import { INotificationService, NotificationService } from '../services/notificationService';
 
 export class NotificationController {
-  private service = new NotificationService();
+    private router: Router;
 
-  async getNotifications(req: any, res: any) {
-    try {
-      const userId = req.user.userId;
-      const rows = await this.service.getUserNotifications(userId);
-      res.json(rows);
-    } catch (err) {
-      console.error("[GET /notifications] Error:", err);
-      res.status(500).json({ error: "Failed to fetch notifications" });
+    constructor(private notificationService: INotificationService) {
+        this.router = express.Router();
+        this.initializeRoutes();
     }
-  }
 
-  async getNotificationConfig(req: any, res: any) {
-    try {
-      const userId = req.user.userId;
-      const config = await this.service.getNotificationConfig(userId);
-      res.json(config);
-    } catch (err) {
-      console.error("[GET /notifications/config] Error:", err);
-      res.status(500).json({ error: "Failed to fetch config" });
+    private initializeRoutes() {
+        this.router.get('/notifications/:userId', this.list.bind(this));
+        this.router.get('/notificationsettings/:userId', this.getSettings.bind(this));
+        this.router.post('/notificationsettings', this.addOrUpdate.bind(this));
+        this.router.delete('/notificationsettings', this.remove.bind(this));
     }
-  }
 
-  async toggleCategory(req: any, res: any) {
-    try {
-      const userId = req.user.userId;
-      const { category, enabled } = req.body;
-      await this.service.toggleCategory(userId, category, enabled);
-      res.json({ message: "Category preference updated" });
-    } catch (err) {
-      console.error("[POST /notifications/category] Error:", err);
-      res.status(500).json({ error: "Failed to update category" });
+    public getRouter(): Router {
+        return this.router;
     }
-  }
 
-  async updateKeywords(req: any, res: any) {
-    try {
-      const userId = req.user.userId;
-      const { keywords } = req.body;
-      await this.service.updateKeywords(userId, keywords);
-      res.json({ message: "Keywords updated" });
-    } catch (err) {
-      console.error("[POST /notifications/keywords] Error:", err);
-      res.status(500).json({ error: "Failed to update keywords" });
+    private async list(req: Request, res: Response, next: NextFunction) {
+        try {
+            const userId = Number(req.params.userId);
+            const data = await this.notificationService.listNotifications(userId);
+            res.json({ success: true, data });
+        } catch (err) {
+            next(err);
+        }
     }
-  }
+
+    private async getSettings(req: Request, res: Response, next: NextFunction) {
+        try {
+            const userId = Number(req.params.userId);
+            const data = await this.notificationService.getUserSettings(userId);
+            res.json({ success: true, data });
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    private async addOrUpdate(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { userId, categoryId, enabled, keywords } = req.body;
+            await this.notificationService.configureSetting(userId, categoryId, enabled, keywords);
+            res.json({ success: true });
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    private async remove(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { userId, categoryId } = req.body;
+            await this.notificationService.removeSetting(userId, categoryId);
+            res.json({ success: true });
+        } catch (err) {
+            next(err);
+        }
+    }
 }

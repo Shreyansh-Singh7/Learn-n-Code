@@ -16,8 +16,8 @@ export const initializeArticleFetchJob = async (): Promise<void> => {
     console.log(`[${new Date().toISOString()}] Last known fetch time: ${lastRunTime.toISOString()}`);
 
     // await runArticleFetchAndNotify();
-
-    cron.schedule('0 */3 * * *', async () => {
+    cron.schedule('* * * * *', async () => {
+    //cron.schedule('0 */3 * * *', async () => {
         console.log(`[${new Date().toISOString()}] Running scheduled article fetch job`);
         await runArticleFetchAndNotify();
     });

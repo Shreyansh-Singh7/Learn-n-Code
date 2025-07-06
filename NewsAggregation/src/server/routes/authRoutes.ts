@@ -1,11 +1,20 @@
-// src/server/routes/authRoutes.ts
-import express from "express";
-import { AuthController } from "../controllers/authController.js";
+import express from 'express';
+import { IUserRepository, UserRepository } from '../repositories/userRepository';
+import { AuthService, IAuthService } from '../services/authService';
+import { AuthController } from '../controllers/authController';
+import { IRouteModule } from './IRouteModule';
 
-const router = express.Router();
-const authController = new AuthController();
+export class AuthRoutes implements IRouteModule {
+    private router = express.Router();
 
-router.post("/signup", (req, res) => authController.signup(req, res));
-router.post("/login", (req, res) => authController.login(req, res));
+    constructor() {
+        const userRepository: IUserRepository = new UserRepository();
+        const authService : IAuthService = new AuthService(userRepository);
+        const authController = new AuthController(authService);
+        this.router.use(authController.getRouter());
+    }
 
-export default router;
+    getRouter() {
+        return this.router;
+    }
+}

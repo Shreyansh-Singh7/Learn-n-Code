@@ -43,7 +43,7 @@ export class NotificationController {
     private async addOrUpdate(req: Request, res: Response, next: NextFunction) {
         try {
             const { userId, categoryId, enabled, keywords } = req.body;
-            await this.notificationService.configureSetting(userId, categoryId, enabled, keywords);
+            await this.notificationService.configureSetting(userId, categoryId, enabled, [""]);
             res.json({ success: true });
         } catch (err) {
             next(err);

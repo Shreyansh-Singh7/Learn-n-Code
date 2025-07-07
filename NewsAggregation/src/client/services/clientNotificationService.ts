@@ -17,14 +17,24 @@ export class ClientNotificationService {
         const res = await fetch(`${this.baseUrl}/notificationsettings/${userId}`);
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
-        return json.data;
+        if (!json.success) throw new Error(json.error);
+
+    const data = json.data.map((setting: any) => ({ 
+        ...setting,
+        keywords: Array.isArray(setting.keywords)
+            ? setting.keywords
+            : setting.keywords
+              ? JSON.parse(setting.keywords)
+              : [],
+    }));
+        return data;
     }
 
     async configureSetting(userId: number, categoryId: number, enabled: boolean, keywords?: string[]): Promise<void> {
         const res = await fetch(`${this.baseUrl}/notificationsettings`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, categoryId, enabled, keywords })
+            body: JSON.stringify({ userId, categoryId: 1, enabled })
         });
         const json = await res.json();
         if (!json.success) throw new Error(json.error);

@@ -8,7 +8,7 @@ export class AuthView {
 
     async getLoginDetails(): Promise<LoginRequest> {
         const email = await ask("Email: ");
-        const password = await ask("Password: ");
+        const password = await ask("Password: ", true);
         return { email, password };
     }
 

@@ -20,8 +20,6 @@ export class NewsApiFetcher implements INewsFetcher {
         const response = await axios.get(this.baseUrlOfApi, {
             params: { apiKey, country: 'us' },
           });
-
-        // console.log("Response from News API:", response.data.articles);
         
         return this.mapArticles(response.data.articles);
     }

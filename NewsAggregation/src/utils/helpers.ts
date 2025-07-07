@@ -26,13 +26,67 @@ export const askQuestion = (query: string): Promise<string> => {
     return new Promise((resolve) => readLine.question(query, resolve));
 }
 
-export const ask = (question: string): Promise<string> => {
-    return new Promise((resolve) => {
-        readLine.question(question, (answer) => {
-            resolve(answer.trim());
-        });
-    });
+export const ask = (question: string, maskInput = false): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    if (!maskInput) {
+      readLine.question(question, (answer) => {
+        resolve(answer.trim());
+      });
+    } else {
+      const stdin = process.stdin;
+      const stdout = process.stdout;
+      let password = '';
+
+      stdout.write(question);
+      stdin.setRawMode(true);
+      stdin.resume();
+      stdin.setEncoding('utf8');
+
+      const onData = (data: Buffer) => {
+        const char = data.toString('utf8');
+
+        if (char === '\r' || char === '\n') {
+          stdout.write('\n');
+          stdin.setRawMode(false);
+          stdin.pause();
+          stdin.removeListener('data', onData);
+          resolve(password.trim());
+        }
+        else if (char === '\u0003') {
+          stdout.write('\n');
+          stdin.setRawMode(false);
+          stdin.pause();
+          stdin.removeListener('data', onData);
+          reject(new Error('User interrupted input'));
+        }
+        else if (char === '\b' || char.charCodeAt(0) === 127) {
+          if (password.length > 0) {
+            password = password.slice(0, -1);
+            stdout.clearLine(0);
+            stdout.cursorTo(0);
+            stdout.write(question + '*'.repeat(password.length));
+          }
+        }
+        else if (char >= ' ' && char <= '~') {
+          password += char;
+          stdout.clearLine(0);
+          stdout.cursorTo(0);
+          stdout.write(question + '*'.repeat(password.length));
+        }
+      };
+
+      stdin.on('data', onData);
+
+      stdin.on('error', (err) => {
+        stdin.setRawMode(false);
+        stdin.pause();
+        stdin.removeListener('data', onData);
+        reject(err);
+      });
+    }
+  });
 };
+
 
 export function getRandomInt(min: number, max: number): number {
     const minCeil = Math.ceil(min);

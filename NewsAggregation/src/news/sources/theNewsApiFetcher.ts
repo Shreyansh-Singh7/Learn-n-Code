@@ -32,7 +32,7 @@ export class TheNewsApiFetcher implements INewsFetcher {
             image_url: item.image_url,
             source: 'The News API',
             language: item.language || 'en',
-            published_at: item.published_at,
+            published_at: new Date(item.published_at).toLocaleDateString('en-CA'),
             likes: getRandomInt(0, 1000),
             dislikes: getRandomInt(0, 500),
         }));

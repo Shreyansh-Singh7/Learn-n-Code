@@ -17,7 +17,7 @@ export class ArticleFetchController {
             });
         }
     }
-
+    
     private async processSource(source: string): Promise<void> {
         const fetcher = getFetcher(source);
         const sourceDBName = getSourceDbName(source);

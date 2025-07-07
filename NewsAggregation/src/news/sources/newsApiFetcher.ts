@@ -18,8 +18,10 @@ export class NewsApiFetcher implements INewsFetcher {
         if (!apiKey) throw new Error('API key not found for News API');
 
         const response = await axios.get(this.baseUrlOfApi, {
-            params: { apiKey }
+            params: { apiKey, country: 'us' },
           });
+
+        // console.log("Response from News API:", response.data.articles);
         
         return this.mapArticles(response.data.articles);
     }
@@ -33,7 +35,7 @@ export class NewsApiFetcher implements INewsFetcher {
             image_url: item.urlToImage,
             source: 'News API',
             language: 'en',
-            published_at: item.publishedAt,
+            published_at: new Date(item.publishedAt).toLocaleDateString('en-CA'),
             likes: getRandomInt(0, 1000),
             dislikes: getRandomInt(0, 500),
         }));
